@@ -1,7 +1,7 @@
 package gts
 
 import (
-	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"sync"
 	"time"
@@ -16,23 +16,28 @@ type Ele struct {
 	Freq     int64
 }
 
-type eles []*Ele
+type Eles []*Ele
 
 type Cron struct {
 	C     chan *Ele
-	Tasks eles
+	Tasks Eles
 }
 
-func (sche *Cron) add(new *Ele) (string, error) {
+func checkEle(new *Ele) error {
 	if new.ID == "" {
 		new.ID = uuid.New().String()
 	}
 	if new.Freq == 0 {
-		return "", errors.New("circular time frequency can not be zero")
+		return fmt.Errorf("circular time frequency can not be zero")
 	}
 	if new.BootTime == 0 {
 		new.BootTime = time.Now().Unix() + new.Freq
 	}
+
+	return nil
+}
+
+func (sche *Cron) add(new *Ele) string  {
 
 	length := len(sche.Tasks)
 	Idx := length
@@ -45,7 +50,7 @@ func (sche *Cron) add(new *Ele) (string, error) {
 		pIdx = (Idx+1)/2 - 1
 	}
 
-	return new.ID, nil
+	return new.ID
 }
 
 func (sche *Cron) pop(index int) *Ele {
@@ -99,9 +104,13 @@ func (sche *Cron) Add(new *Ele) (string, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	task, err := sche.add(new)
+	if err := checkEle(new); err != nil {
+		return "", err
+	}
+
+	scheID := sche.add(new)
 	sche.resetTimer()
-	return task, err
+	return scheID, nil
 }
 
 func (sche *Cron) Pop(index int) *Ele {
@@ -127,11 +136,51 @@ func (sche *Cron) Remove(id string) bool {
 	return false
 }
 
+func (sche *Cron) Madd(news Eles) ([]string, error) {
+	// check each
+	for _, e := range news {
+		if err := checkEle(e); err != nil {
+			return nil, err
+		}
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	var res []string
+	for _, e := range news {
+		res = append(res, sche.add(e))
+	}
+	sche.resetTimer()
+
+	return res, nil
+}
+
+func (sche *Cron) Mrem(ids []string) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	taskMap := make(map[string]int)
+	for i, v := range sche.Tasks {
+		taskMap[v.ID] = i
+	}
+
+	for _, id := range ids {
+		if _, ok := taskMap[id]; !ok {
+			return fmt.Errorf("%s not in Crontabs", id)
+		}
+	}
+
+	for _, id := range ids {
+		sche.pop(taskMap[id])
+	}
+	return nil
+}
+
 func NewCron() *Cron {
 	ch := make(chan *Ele, 5)
 	sche := &Cron{
 		C:     ch,
-		Tasks: eles{},
+		Tasks: Eles{},
 	}
 
 	go startCron(sche)
