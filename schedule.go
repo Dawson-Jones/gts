@@ -173,6 +173,7 @@ func (sche *Cron) Mrem(ids []string) error {
 	for _, id := range ids {
 		sche.pop(taskMap[id])
 	}
+	sche.resetTimer()
 	return nil
 }
 
