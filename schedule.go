@@ -2,7 +2,6 @@ package gts
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"sync"
 	"time"
 )
@@ -12,55 +11,58 @@ var t *time.Timer
 
 type Ele struct {
 	ID       string
-	BootTime int64
+	bootTime int64
 	Freq     int64
+	Cycles   int64
+	Handler  func(interface{})
+	Prams    interface{}
 }
 
-type Eles []*Ele
-
-type Cron struct {
-	C     chan *Ele
-	Tasks Eles
+type Sche interface {
+	Add(*Ele) error
+	Madd(eles) error
+	Mrem([]string) error
+	Pop(int) *Ele
+	Remove(string) bool
 }
+type eles []*Ele
 
 func checkEle(new *Ele) error {
 	if new.ID == "" {
-		new.ID = uuid.New().String()
+		return fmt.Errorf("ID empty")
 	}
 	if new.Freq == 0 {
 		return fmt.Errorf("circular time frequency can not be zero")
 	}
-	if new.BootTime == 0 {
-		new.BootTime = time.Now().Unix() + new.Freq
+	if new.Handler == nil {
+		return fmt.Errorf("no handle funtion to execute")
 	}
 
+	new.bootTime = time.Now().Unix() + new.Freq
 	return nil
 }
 
-func (sche *Cron) add(new *Ele) string  {
-
-	length := len(sche.Tasks)
+func (sche *eles) add(new *Ele) {
+	length := len(*sche)
 	Idx := length
 	pIdx := (Idx+1)/2 - 1
-	sche.Tasks = append(sche.Tasks, new)
+	*sche = append(*sche, new)
 
-	for ; pIdx >= 0 && sche.Tasks[Idx].BootTime < sche.Tasks[pIdx].BootTime; {
-		sche.Tasks[pIdx], sche.Tasks[Idx] = sche.Tasks[Idx], sche.Tasks[pIdx]
+	for pIdx >= 0 && (*sche)[Idx].bootTime < (*sche)[pIdx].bootTime {
+		(*sche)[pIdx], (*sche)[Idx] = (*sche)[Idx], (*sche)[pIdx]
 		Idx = pIdx
 		pIdx = (Idx+1)/2 - 1
 	}
-
-	return new.ID
 }
 
-func (sche *Cron) pop(index int) *Ele {
-	length := len(sche.Tasks)
+func (sche *eles) pop(index int) *Ele {
+	length := len(*sche)
 	if length == 0 || index >= length {
 		return nil
 	}
 
-	res := sche.Tasks[index]
-	sche.Tasks[index] = sche.Tasks[length-1]
+	res := (*sche)[index]
+	(*sche)[index] = (*sche)[length-1]
 
 	for {
 		l_idx := index*2 + 1
@@ -71,28 +73,28 @@ func (sche *Cron) pop(index int) *Ele {
 		}
 
 		var next int
-		if r_idx >= length || sche.Tasks[l_idx].BootTime < sche.Tasks[r_idx].BootTime {
+		if r_idx >= length || (*sche)[l_idx].bootTime < (*sche)[r_idx].bootTime {
 			next = l_idx
 		} else {
 			next = r_idx
 		}
 
-		if sche.Tasks[index].BootTime > sche.Tasks[next].BootTime {
-			sche.Tasks[index], sche.Tasks[next] = sche.Tasks[next], sche.Tasks[index]
+		if (*sche)[index].bootTime > (*sche)[next].bootTime {
+			(*sche)[index], (*sche)[next] = (*sche)[next], (*sche)[index]
 			index = next
 		} else {
 			break
 		}
 	}
 
-	sche.Tasks = sche.Tasks[:length-1]
+	*sche = (*sche)[:length-1]
 	return res
 }
 
-func (sche *Cron) resetTimer() {
-	if len(sche.Tasks) > 0 {
+func (sche *eles) resetTimer() {
+	if len(*sche) > 0 {
 		now := time.Now().Unix()
-		nextTime := sche.Tasks[0].BootTime - now
+		nextTime := (*sche)[0].bootTime - now
 		if nextTime < 0 {
 			nextTime = 0
 		}
@@ -100,20 +102,20 @@ func (sche *Cron) resetTimer() {
 	}
 }
 
-func (sche *Cron) Add(new *Ele) (string, error) {
+func (sche *eles) Add(new *Ele) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	if err := checkEle(new); err != nil {
-		return "", err
+		return err
 	}
 
-	scheID := sche.add(new)
+	sche.add(new)
 	sche.resetTimer()
-	return scheID, nil
+	return nil
 }
 
-func (sche *Cron) Pop(index int) *Ele {
+func (sche *eles) Pop(index int) *Ele {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -122,11 +124,11 @@ func (sche *Cron) Pop(index int) *Ele {
 	return task
 }
 
-func (sche *Cron) Remove(id string) bool {
+func (sche *eles) Remove(id string) bool {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	for i, v := range sche.Tasks {
+	for i, v := range *sche {
 		if v.ID == id {
 			sche.pop(i)
 			sche.resetTimer()
@@ -136,31 +138,30 @@ func (sche *Cron) Remove(id string) bool {
 	return false
 }
 
-func (sche *Cron) Madd(news Eles) ([]string, error) {
+func (sche *eles) Madd(news eles) error {
 	// check each
 	for _, e := range news {
 		if err := checkEle(e); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	mutex.Lock()
 	defer mutex.Unlock()
-	var res []string
 	for _, e := range news {
-		res = append(res, sche.add(e))
+		sche.add(e)
 	}
 	sche.resetTimer()
 
-	return res, nil
+	return nil
 }
 
-func (sche *Cron) Mrem(ids []string) error {
+func (sche *eles) Mrem(ids []string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	taskMap := make(map[string]int)
-	for i, v := range sche.Tasks {
+	for i, v := range *sche {
 		taskMap[v.ID] = i
 	}
 
@@ -177,32 +178,33 @@ func (sche *Cron) Mrem(ids []string) error {
 	return nil
 }
 
-func NewCron() *Cron {
-	ch := make(chan *Ele, 5)
-	sche := &Cron{
-		C:     ch,
-		Tasks: Eles{},
-	}
-
-	go startCron(sche)
-	return sche
-}
-
-func startCron(sche *Cron) {
+func ScheInit() Sche {
+	elesP := &eles{}
 	t = time.NewTimer(10 * time.Second)
 
-	for {
-		select {
-		case <-t.C:
-			cur := sche.Pop(0)
-			if cur == nil {
-				t.Reset(10 * time.Second)
-				continue
-			}
+	go startSche(elesP)
+	return elesP
+}
 
-			cur.BootTime += cur.Freq
-			sche.Add(cur)
-			sche.C <- cur
+func startSche(sche *eles) {
+	for {
+		<-t.C
+		cur := sche.Pop(0)
+		if cur == nil {
+			t.Reset(10 * time.Second)
+			continue
 		}
+
+		go cur.Handler(cur.Prams)
+
+		if cur.Cycles == 0 {
+			sche.resetTimer()
+			continue
+		}
+		if cur.Cycles > 0 {
+			cur.Cycles--
+		}
+		cur.bootTime += cur.Freq
+		sche.Add(cur)
 	}
 }
