@@ -12,49 +12,71 @@ package main
 import (
 	"fmt"
 	"github.com/Dawson-Jones/gts"
+	"github.com/google/uuid"
 	"log"
 	"time"
 )
 
+func handler(p interface{}) {
+	id, ok := p.(string)
+	if !ok {
+		return
+	}
+	fmt.Println(id, time.Now().Unix())
+}
+
 func main() {
-	cron := gts.NewCron()
+	var err error
+	cron := gts.ScheInit()
 
-	id, err := cron.Add(&gts.Ele{Freq: 3})
+	id1 := uuid.New().String()
+	err = cron.Add(&gts.Ele{
+		ID:      id1,
+		Freq:    3,
+		Handler: handler,
+		Prams:   id1,
+		Cycles:  -1,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	SaveTODB(id)
+	SaveTODB(id1)
 
-	id, err = cron.Add(&gts.Ele{Freq: 5})
+	id2 := uuid.New().String()
+	err = cron.Add(&gts.Ele{
+		ID:      id2,
+		Freq:    4,
+		Handler: handler,
+		Prams:   id2,
+		Cycles:  -1,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	SaveTODB(id)
+	SaveTODB(id2)
 
-	id, err = cron.Add(&gts.Ele{Freq: 7})
+	id3 := uuid.New().String()
+	err = cron.Add(&gts.Ele{
+		ID:      id3,
+		Freq:    5,
+		Handler: handler,
+		Prams:   id3,
+		Cycles:  -1,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	SaveTODB(id)
+	SaveTODB(id3)
 
-	go func() {
-		for {
-			select {
-			case t := <-cron.C:
-				fmt.Println(t.ID, time.Now().Unix())
-			}
-		}
-	}()
-	
-    time.Sleep(10 * time.Second)
-	cron.Remove(id)
+	time.Sleep(10 * time.Second)
+	cron.Remove(id1)
 	fmt.Println("----------")
 
 	select {}
 }
 
 func SaveTODB(id string) {
-	// 储存返回的 id 
+	// 储存返回的 id
 }
 
 ```
@@ -80,14 +102,14 @@ bb857db5-1718-4457-9671-4de75533d925 1607917016     // 5
 ## 方法
 - Add  
 ```go
-	cron := gts.NewCron()
-	
-	id, err := cron.Add(&gts.Ele{
-        ID       string     // 可选项， 不填则自动生成
-        BootTime int64      // 可选， 默认为当前时间的 Freq 秒之后
-		Freq: 3             // 必填项, 循环触发的频率
+	id1 := uuid.New().String()
+	err = cron.Add(&gts.Ele{
+		ID:      id1,       // 任务ID
+		Freq:    3,         // 频率
+		Handler: handler,   // 任务的回调函数
+		Prams:   id1,       // 回调函数的参数
+		Cycles:  -1,        // 循环次数，负数则是无限循环
 	})
-	
 	if err != nil {
 		log.Fatal(err)
 	}
