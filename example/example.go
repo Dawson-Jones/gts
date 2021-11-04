@@ -26,7 +26,7 @@ func main() {
 		Freq:    3,
 		Handler: handler,
 		Prams:   id1,
-		Cycles:  -1,
+		Cycles:  2,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -36,10 +36,10 @@ func main() {
 	id2 := uuid.New().String()
 	err = cron.Add(&gts.Ele{
 		ID:      id2,
-		Freq:    4,
+		Freq:    5,
 		Handler: handler,
 		Prams:   id2,
-		Cycles:  -1,
+		Cycles:  1,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -49,7 +49,7 @@ func main() {
 	id3 := uuid.New().String()
 	err = cron.Add(&gts.Ele{
 		ID:      id3,
-		Freq:    5,
+		Freq:    7,
 		Handler: handler,
 		Prams:   id3,
 		Cycles:  -1,
@@ -59,7 +59,7 @@ func main() {
 	}
 	SaveTODB(id3)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	cron.Remove(id1)
 	fmt.Println("----------")
 

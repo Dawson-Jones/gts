@@ -197,11 +197,11 @@ func startSche(sche *eles) {
 
 		go cur.Handler(cur.Prams)
 
-		if cur.Cycles == 0 {
+		if cur.Cycles == 1 {
 			sche.resetTimer()
 			continue
 		}
-		if cur.Cycles > 0 {
+		if cur.Cycles > 1 {
 			cur.Cycles--
 		}
 		cur.bootTime += cur.Freq
