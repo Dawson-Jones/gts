@@ -14,7 +14,7 @@ type Ele struct {
 	bootTime int64
 	Freq     int64
 	Cycles   int64
-	Handler  func(interface{}) error
+	Handler  func(interface{})
 	Prams    interface{}
 }
 

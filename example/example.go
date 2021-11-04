@@ -8,13 +8,12 @@ import (
 	"time"
 )
 
-func handler(p interface{}) error{
+func handler(p interface{}) {
 	id, ok := p.(string)
 	if !ok {
-		return fmt.Errorf("error...")
+		return
 	}
 	fmt.Println(id, time.Now().Unix())
-	return nil
 }
 
 func main() {
