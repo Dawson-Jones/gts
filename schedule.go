@@ -20,7 +20,7 @@ type Ele struct {
 
 type Sche interface {
 	Add(*Ele) error
-	Madd(eles) error
+	Madd([]*Ele) error
 	Mrem([]string) error
 	Pop(int) *Ele
 	Remove(string) bool
@@ -138,7 +138,7 @@ func (sche *eles) Remove(id string) bool {
 	return false
 }
 
-func (sche *eles) Madd(news eles) error {
+func (sche *eles) Madd(news []*Ele) error {
 	// check each
 	for _, e := range news {
 		if err := checkEle(e); err != nil {
