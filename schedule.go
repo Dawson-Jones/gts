@@ -11,7 +11,7 @@ var t *time.Timer
 
 type Ele struct {
 	ID       string
-	bootTime int64
+	BootTime int64
 	Freq     int64
 	Cycles   int64
 	Handler  func(interface{})
@@ -38,7 +38,9 @@ func checkEle(new *Ele) error {
 		return fmt.Errorf("no handle funtion to execute")
 	}
 
-	new.bootTime = time.Now().Unix() + new.Freq
+	if new.BootTime == 0 {
+		new.BootTime = time.Now().Unix() + new.Freq
+	}
 	return nil
 }
 
@@ -48,7 +50,7 @@ func (sche *eles) add(new *Ele) {
 	pIdx := (Idx+1)/2 - 1
 	*sche = append(*sche, new)
 
-	for pIdx >= 0 && (*sche)[Idx].bootTime < (*sche)[pIdx].bootTime {
+	for pIdx >= 0 && (*sche)[Idx].BootTime < (*sche)[pIdx].BootTime {
 		(*sche)[pIdx], (*sche)[Idx] = (*sche)[Idx], (*sche)[pIdx]
 		Idx = pIdx
 		pIdx = (Idx+1)/2 - 1
@@ -73,13 +75,13 @@ func (sche *eles) pop(index int) *Ele {
 		}
 
 		var next int
-		if r_idx >= length || (*sche)[l_idx].bootTime < (*sche)[r_idx].bootTime {
+		if r_idx >= length || (*sche)[l_idx].BootTime < (*sche)[r_idx].BootTime {
 			next = l_idx
 		} else {
 			next = r_idx
 		}
 
-		if (*sche)[index].bootTime > (*sche)[next].bootTime {
+		if (*sche)[index].BootTime > (*sche)[next].BootTime {
 			(*sche)[index], (*sche)[next] = (*sche)[next], (*sche)[index]
 			index = next
 		} else {
@@ -94,7 +96,7 @@ func (sche *eles) pop(index int) *Ele {
 func (sche *eles) resetTimer() {
 	if len(*sche) > 0 {
 		now := time.Now().Unix()
-		nextTime := (*sche)[0].bootTime - now
+		nextTime := (*sche)[0].BootTime - now
 		if nextTime < 0 {
 			nextTime = 0
 		}
@@ -204,7 +206,7 @@ func startSche(sche *eles) {
 		if cur.Cycles > 1 {
 			cur.Cycles--
 		}
-		cur.bootTime += cur.Freq
+		cur.BootTime += cur.Freq
 		sche.Add(cur)
 	}
 }
