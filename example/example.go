@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/Dawson-Jones/gts"
-	"github.com/google/uuid"
 	"log"
 	"time"
 )
@@ -20,7 +19,7 @@ func main() {
 	var err error
 	cron := gts.ScheInit()
 
-	id1 := uuid.New().String()
+	id1 := "111111"
 	err = cron.Add(&gts.Ele{
 		ID:      id1,
 		Freq:    3,
@@ -33,7 +32,7 @@ func main() {
 	}
 	SaveTODB(id1)
 
-	id2 := uuid.New().String()
+	id2 := "222222"
 	err = cron.Add(&gts.Ele{
 		ID:      id2,
 		Freq:    5,
@@ -46,7 +45,7 @@ func main() {
 	}
 	SaveTODB(id2)
 
-	id3 := uuid.New().String()
+	id3 := "333333"
 	err = cron.Add(&gts.Ele{
 		ID:      id3,
 		Freq:    7,
